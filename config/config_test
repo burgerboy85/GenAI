@@ -1,0 +1,6 @@
+cd .venv/bin
+source activate
+
+
+(.venv) rahulchakraborty@rahuls-MacBook-Air ~ % cd Documents/Study/GenAI/text_to_sql_proj/src 
+(.venv) rahulchakraborty@rahuls-MacBook-Air src % python3 -m streamlit run first_version.py     
