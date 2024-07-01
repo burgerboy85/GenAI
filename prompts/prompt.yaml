@@ -1,0 +1,89 @@
+    _type: prompt
+    input_variables:
+        ["input"]
+    template: 
+        '''Given below are the table structures in analytics database raw schema in snowflake cloud database
+          CUSTOMER (
+              C_CUSTKEY NUMBER(38,0),
+              C_NAME VARCHAR(25),
+              C_ADDRESS VARCHAR(40),
+              C_NATIONKEY NUMBER(38,0),
+              C_PHONE VARCHAR(15),
+              C_ACCTBAL NUMBER(12,2),
+              C_MKTSEGMENT VARCHAR(10),
+              C_COMMENT VARCHAR(117)
+          );
+          ORDERS (
+              O_ORDERKEY NUMBER(38,0),
+              O_CUSTKEY NUMBER(38,0),
+              O_ORDERSTATUS VARCHAR(1),
+              O_TOTALPRICE NUMBER(12,2),
+              O_ORDERDATE DATE,
+              O_ORDERPRIORITY VARCHAR(15),
+              O_CLERK VARCHAR(15),
+              O_SHIPPRIORITY NUMBER(38,0),
+              O_COMMENT VARCHAR(79)
+          );
+         CORE_T (
+			 CUS_Id VARCHAR(255),
+             MDW_Id VARCHAR(255),
+             E_SOURCE VARCHAR(255) DEFAULT NULL,
+             E_CATEGORY VARCHAR(255),
+             E_CODE VARCHAR(255),
+             E_DATETIME TIMESTAMP,
+             S_PRO_Id VARCHAR(255),
+             S_PRO_NAME VARCHAR(255),
+             ORD_Id CHAR(10),
+             S_SND_Id VARCHAR(255),
+             S_SND_NAME VARCHAR(255),
+             ORD_PRIORITY_CODE CHAR(1), 
+             ORD_PRIORITY_NAME VARCHAR(255), 
+             ORD_IS_URGENT CHAR(1),
+             SAM_Id VARCHAR(255),
+             SAM_TYPE_NAME VARCHAR(255),
+             T_Id INT CHECK,
+             T_NAME VARCHAR(255),
+             T_GROUP_Id VARCHAR(255),
+             T_GROUP_NAME VARCHAR(255),
+             INST_MOD_Id VARCHAR(255),
+             INST_MOD_NAME VARCHAR(255),
+             INST_DRI VARCHAR(255),
+             PAR_INST_Id VARCHAR(255),
+             PAR_INST_NAME VARCHAR(255),
+             T_ACN_CDE VARCHAR(255),
+             SAM_TYPE_CDE CHAR(1),
+             T_RESULT FLOAT(4)        
+          );
+          NATION (
+              N_NATIONKEY NUMBER(38,0),
+              N_NAME VARCHAR(25),
+              N_REGIONKEY NUMBER(38,0),
+              N_COMMENT VARCHAR(152)
+          );
+          
+          REGION (
+              R_REGIONKEY NUMBER(38,0),
+              R_NAME VARCHAR(25),
+              R_COMMENT VARCHAR(152)
+          );
+          
+                  take user questions and response back with sql query.
+              example : 
+              user question : give me the number of orders placed in last 10 days
+              your generated sql query : select o_orderdate , count(*) from analytics.raw.orders  where o_orderdate between current_date()-10 and current_date() group by o_orderdate ;
+              example :
+              user question : tell me top 3 nations having the maximum orders
+              your generated sql query : select n.n_name , count(*) as order_count from analytics.raw.orders o 
+                                          inner join analytics.raw.customer c on o.o_custkey = c.c_custkey
+                                          inner join analytics.raw.nation n on c.c_nationkey = n.n_nationkey
+                                          group by n.n_name order by order_count desc limit 3
+                                          ;
+              example :
+              user_question : give me the customer details (Only Customer ID and Site producer name) for which it is not a routine order (i.e. ORD_PRIORITY_NAME is not Routine).
+And it is not a blood sample (i.e. SAM_TYPE_NAME is not Blood).            
+              your generated sql query : SELECT CUS_Id, S_PRO_NAME
+                                            FROM core_t
+                                            WHERE ORD_PRIORITY_NAME <> 'Routine'
+                                            AND SAM_TYPE_NAME <> 'Blood';
+              user question : {input}
+              your generated sql query : '''
