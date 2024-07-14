@@ -1,0 +1,131 @@
+    _type: prompt
+    input_variables:
+      - input
+    template: |
+      Given below are the table structures in analytics database raw schema in snowflake cloud database
+      CUSTOMER:
+        - C_CUSTKEY NUMBER(38,0)
+        - C_NAME VARCHAR(25)
+        - C_ADDRESS VARCHAR(40)
+        - C_NATIONKEY NUMBER(38,0)
+        - C_PHONE VARCHAR(15)
+        - C_ACCTBAL NUMBER(12,2)
+        - C_MKTSEGMENT VARCHAR(10)
+        - C_COMMENT VARCHAR(117)
+      ORDERS:
+        - O_ORDERKEY NUMBER(38,0)
+        - O_CUSTKEY NUMBER(38,0)
+        - O_ORDERSTATUS VARCHAR(1)
+        - O_TOTALPRICE NUMBER(12,2)
+        - O_ORDERDATE DATE
+        - O_ORDERPRIORITY VARCHAR(15)
+        - O_CLERK VARCHAR(15)
+        - O_SHIPPRIORITY NUMBER(38,0)
+        - O_COMMENT VARCHAR(79)
+      nac_test:
+        - src_sys_id int(5) DEFAULT NULL
+        - snd_cde varchar(7) DEFAULT NULL
+        - snd_nme varchar(20) DEFAULT NULL
+        - per_lab_cde varchar(2) DEFAULT NULL
+        - per_lab_nme varchar(4) DEFAULT NULL
+        - ord_num varchar(11) DEFAULT NULL
+        - sam_id varchar(10) DEFAULT NULL
+        - sam_typ_cde varchar(1) DEFAULT NULL
+        - sam_typ_nme varchar(5) DEFAULT NULL
+        - tst_assay_id varchar(4) DEFAULT NULL
+        - tst_assay_nme varchar(10) DEFAULT NULL
+        - tst_ordering_gr_id varchar(5) DEFAULT NULL
+        - tst_ordering_gr_nme varchar(20) DEFAULT NULL
+        - order_pr_cde varchar(1) DEFAULT NULL
+        - order_pr_nme varchar(7) DEFAULT NULL
+        - sam_pr_cde varchar(1) DEFAULT NULL
+        - sam_pr_nme varchar(7) DEFAULT NULL
+        - tst_pr_cde varchar(1) DEFAULT NULL
+        - tst_pr_nme varchar(7) DEFAULT NULL
+        - tst_dep varchar(10) DEFAULT NULL
+        - p_ana_inst_m_id varchar(4) DEFAULT NULL
+        - p_ana_inst_m_nme varchar(31) DEFAULT NULL
+        - p_ana_inst_id varchar(3) DEFAULT NULL
+        - p_ana_inst_nme varchar(10) DEFAULT NULL
+        - ana_inst_m_id varchar(4) DEFAULT NULL
+        - ana_inst_m_nme varchar(21) DEFAULT NULL
+        - ana_inst_id varchar(3) DEFAULT NULL
+        - ana_inst_nme varchar(10) DEFAULT NULL
+        - ord_reg_ts varchar(19) DEFAULT NULL
+        - tst_ord_ts varchar(19) DEFAULT NULL
+        - sam_access_ts varchar(19) DEFAULT NULL
+        - Sample_Seen_on_PreAna_Timest varchar(19) DEFAULT NULL
+        - Sample_Seen_on_Ana_Timest varchar(19) DEFAULT NULL
+        - Tst_Rer_Req_Timest varchar(19) DEFAULT NULL
+        - Tst_Val_Timest varchar(19) DEFAULT NULL
+        - Tst_Rslt_Sent_to_Hst_Timest varchar(19) DEFAULT NULL
+        - Tst_Rslt_Timest varchar(19) DEFAULT NULL
+        - Tst_Ana_Trans_Timest decimal(4,1) DEFAULT NULL
+        - Tst_rslt int(1) DEFAULT NULL
+        - Act_rslt_flg int(1) DEFAULT NULL
+        - Autovali_flg int(1) DEFAULT NULL
+        - Add_flg int(1) DEFAULT NULL
+        - Rr_flg varchar(5) DEFAULT NULL
+        - Wrd_nme varchar(10) DEFAULT NULL
+        - Cancel_Lvl varchar(13) DEFAULT NULL
+        - Wrd_ID varchar(10) DEFAULT NULL
+        - Ala_ID varchar(10) DEFAULT NULL
+        - Cancellation_f varchar(1) DEFAULT NULL
+        - Cancellation_Timest varchar(13) DEFAULT NULL
+        - Gender varchar(13) DEFAULT NULL
+        - Age varchar(10) DEFAULT NULL
+        - Patient_ID varchar(10) DEFAULT NULL
+      cca_test:
+        - patient_id varchar(100)
+        - patient_age_bracket varchar(100)
+        - patient_cycle_id varchar(100)
+        - medical_center varchar(100)
+        - cycle_step varchar(100)
+        - colposcopy_date varchar(100)
+        - sample_id varchar(100)
+        - sample_collected_date varchar(100)
+        - test_name varchar(100)
+        - result_code varchar(100)
+        - result_date varchar(100)
+        - laboratory_name varchar(100)
+      NATION:
+        - N_NATIONKEY NUMBER(38,0)
+        - N_NAME VARCHAR(25)
+        - N_REGIONKEY NUMBER(38,0)
+        - N_COMMENT VARCHAR(152)
+      REGION:
+        - R_REGIONKEY NUMBER(38,0)
+        - R_NAME VARCHAR(25)
+        - R_COMMENT VARCHAR(152)
+      take_user_questions_and_response_back_with_sql_query: |
+        - example: 
+          user_question: give me the number of orders placed in the last 10 days
+          generated_sql_query: |
+            select o_orderdate, count(*) from analytics.raw.orders
+            where o_orderdate between current_date()-10 and current_date()
+            group by o_orderdate;
+        - example:
+          user_question: tell me the top 3 nations having the maximum orders
+          generated_sql_query: |
+            select n.n_name, count(*) as order_count from analytics.raw.orders o
+            inner join analytics.raw.customer c on o.o_custkey = c.c_custkey
+            inner join analytics.raw.nation n on c.c_nationkey = n.n_nationkey
+            group by n.n_name order by order_count desc limit 3;
+        - example:
+          user_question: give me the customer details (Only Source System ID and S producer name) for which it is not a routine order (i.e. order_pr_nme is not Routine) and it is not a blood sample (i.e. sam_typ_nme is not Blood).
+          generated_sql_query: |
+            SELECT src_sys_id, sam_pr_nme
+            FROM nac_test
+            WHERE order_pr_nme <> 'Routine'
+            AND sam_typ_nme <> 'Blood';
+        - example:
+          user_question: Which medical center has the highest number of colposcopies performed?
+          generated_sql_query: |
+            SELECT medical_center, COUNT(*) AS colposcopy_count FROM cca_test
+            WHERE cycle_step = 'Colposcopy'
+            GROUP BY medical_center
+            ORDER BY colposcopy_count DESC
+            LIMIT 1;
+        - user_question: {input}
+          generated_sql_query: |
+            {input}
