@@ -1,0 +1,724 @@
+#examples for SQL statements based on question
+examples = [
+    {   "metadata": """Create table customers(customerNumber int, customerName varchar(25), phone varchar(25),country varchar(25), creditLimit int);""",
+        "input": "List all customers in France with a credit limit over 20,000.",
+        "query": "SELECT * FROM customers WHERE country = 'France' AND creditLimit > 20000;"
+    },
+    {
+        "metadata": """Create table employees(employeeNumber int, lastName varchar(25), firstName varchar(25), extension varchar(10), email varchar(100), officeCode int, reportsTo int, jobTitle varchar(25));""",
+        "input": "List the employee number, last name, first name, and office code for employees who report to employee 1143.",
+        "query": "SELECT employeeNumber, lastName, firstName, officeCode FROM employees WHERE reportsTo = 1143;"
+    },
+    {
+        "metadata": """
+                        Create table dim_lab
+                            (
+                                lab_id varchar(25),
+                                lab_name varchar(25)
+                            );
+                            create table dim_hosp
+                            (
+                                hosp_id varchar(25),
+                                hosp_name varchar(25)
+                            );
+                            create table dim_test_dept
+                            (
+                                test_dept_id varchar(25),
+                                test_dept_name varchar(25)
+                            );
+                            create table dim_test
+                            (
+                                test_id varchar(25),
+                                test_name varchar(25),
+                                test_dept_id varchar(25)
+                            );
+                            create table dim_instrument
+                            (
+                                instrument_id varchar(25),
+                                instrument_name varchar(25),
+                                test_dept_id varchar(25),
+                                hourly_capacity int,
+                                instrument_type varchar(25)
+                            );
+                            create table dim_result
+                            (
+                                result_id varchar(25),
+                                test_id varchar(25),
+                                result_value varchar(25),
+                                result_unit varchar(25),
+                                result_range varchar(25),
+                                result_status varchar(25)
+                            );
+                            create table dim_sample
+                            (
+                                sample_id varchar(25),
+                                collect_date date
+                            );
+                            create table dim_patient
+                            (
+                                patient_id varchar(25),
+                                admit_date date,
+                                discharge_date date,
+                                hosp_id varchar(25)
+                            );
+                            create table dim_doctor
+                            (
+                                doctor_id varchar(25),
+                                doctor_name varchar(25)
+                            );
+                            create table fact_test_result
+                            (
+                                lab_id varchar(25),
+                                hosp_id varchar(25),
+                                test_id varchar(25),
+                                sample_id varchar(25),
+                                patient_id varchar(25),
+                                doctor_id varchar(25),
+                                request_date date,
+                                test_date date,
+                                result_date date,
+                                result_id varchar(25),
+                                is_rerun boolean,
+                                is_addon boolean,
+                                pre_instrument_id varchar(25),
+                                instrument_id varchar(25),
+                                post_instrument_id varchar(25),
+                            );
+                            create table fact_events
+                            (
+                                lab_id varchar(25),
+                                hosp_id varchar(25),
+                                test_id varchar(25),
+                                sample_id varchar(25),
+                                patient_id varchar(25),
+                                event_code varchar(25),
+                                event_name varchar(25),
+                                event_date date,
+                                instrument_id varchar(25),
+                                is_rerun boolean,
+                                is_addon boolean
+                            );""",
+        "input": "List all lab names.",
+        "query": """SELECT lab_name FROM dim_lab;"""
+    },
+    {
+        "metadata": """""",
+        "input": "List all test names.",
+        "query": """SELECT test_name FROM dim_test;"""
+    },
+    {
+        "metadata": """"""
+        "input": "What is the volume of tests performed by each lab?",
+        "query": """SELECT lab_name, COUNT(test_id) FROM fact_test_result GROUP BY lab_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average TAT between test request and test date for Glucose test?",
+        "query": """SELECT AVG(TAT) 
+                    FROM (
+                    SELECT MAX(DATEDIFF(test_date, request_date)) as TAT
+                    FROM fact_test_result 
+                    INNER JOIN dim_test 
+                        ON fact_test_result.test_id = dim_test.test_id
+                    WHERE test_name = 'Glucose'
+                    GROUP BY sample_id
+                    )tbl;"""
+    },
+    {
+        "metadata": """""",
+        "input": "How many patients have been admitted to the ABC hospital.",
+        "query": """SELECT patient_id FROM dim_patient
+                    INNER JOIN dim_hosp
+                        ON dim_patient.hosp_id = dim_hosp.hosp_id
+                    WHERE hosp_name = 'ABC';"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is positivity rate for HIV test.",
+        "query": """SELECT COUNT(*) FROM fact_test_result
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    INNER JOIN dim_result
+                        ON fact_test_result.result_id = dim_result.result_id
+                    WHERE test_name = 'HIV' AND result_status = 'Positive';"""
+    },
+    {
+        "metadata": """""",
+        "input": "How many patients were detected positive for  in the last month.",
+        "query": """SELECT COUNT(DISTINCT patient_id) FROM fact_test_result
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    INNER JOIN dim_result
+                        ON fact_test_result.result_id = dim_result.result_id
+                    WHERE test_name = 'HIV' AND result_status = 'Positive' AND result_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);"""
+    },
+    {
+        "metadata": """""",
+        "input": "List all patients who were detected positive for HIV.",
+        "query": """SELECT DISTINCT patient_id FROM fact_test_result
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    INNER JOIN dim_result
+                        ON fact_test_result.result_id = dim_result.result_id
+                    WHERE test_name = 'HIV' AND result_status = 'Positive';"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is test volume on weekends.",
+        "query": """SELECT COUNT(*) FROM fact_test_result
+                    WHERE DAYOFWEEK(test_date) IN (1,7);"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average test volume per day.",
+        "query": """SELECT AVG(test_volume) FROM
+                        (SELECT COUNT(*) as test_volume
+                            FROM fact_test_result
+                            GROUP BY test_date
+                        ) AS tbl;"""
+    },
+    {
+        "metadata": """""",
+        "input": "On which days of week are the labs most occupied.",
+        "query": """SELECT DAYOFWEEK(test_date), COUNT(*) as test_volume
+                    FROM fact_test_result
+                    GROUP BY DAYOFWEEK(test_date)
+                    ORDER BY test_volume DESC;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the daily average test volume per lab.",
+        "query": """SELECT lab_name, AVG(test_volume) FROM
+                        (SELECT lab_name,CAST(test_date AS DATE) as test_date, COUNT(*) as test_volume
+                            FROM fact_test_result
+                            GROUP BY lab_name,CAST(test_date AS DATE)
+                        ) AS tbl
+                    Group by lab_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What was the sample volume for immunology department in the last 6 months.",
+        "query": """SELECT COUNT(distinct sample_id) FROM fact_test_result
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                    WHERE test_dept_name = 'Immunology' AND test_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH);"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average collect to result TAT for each test.",
+        "query": """SELECT AVG(TAT) 
+                    FROM (
+                    SELECT test_name,max(DATEDIFF(collect_date, result_date)) as TAT
+                    FROM fact_test_result
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    INNER JOIN dim_test 
+                        ON fact_test_result.test_id = dim_test.test_id
+                    GROUP BY fact_test_result.sample_id, dim_test.test_name
+                    )tbl;"""
+    },  
+    {
+        "metadata": """""",
+        "input": "What is the average request to result TAT for each lab.",
+        "query": """SELECT lab_name, AVG(DATEDIFF(request_date, result_date)) 
+                    FROM fact_test_result 
+                    INNER JOIN dim_lab 
+                        ON fact_test_result.lab_id = dim_lab.lab_id
+                    GROUP BY lab_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average TAT for each test department.",
+        "query": """SELECT test_dept_name, AVG(DATEDIFF(test_date, request_date)) 
+                    FROM fact_test_result 
+                    INNER JOIN dim_test 
+                        ON fact_test_result.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                     GROUP BY test_dept_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily events volume for each lab.",
+        "query": """SELECT lab_name, AVG(events_volume) FROM
+                        (SELECT lab_name, COUNT(*) as events_volume
+                            FROM fact_events
+                            GROUP BY lab_name,CAST(event_date AS DATE)
+                        ) AS tbl
+                    Group by lab_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "How many samples were collected in the last month.",
+        "query": """SELECT COUNT(DISTINCT sample_id) FROM fact_events
+                    WHERE event_code = 'Sample Collection'
+                    AND event_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily sample collection volume.",
+        "query": """SELECT AVG(sample_volume) FROM
+                        (SELECT COUNT(*) as sample_volume
+                            FROM fact_events
+                            WHERE event_code = 'Sample Collection'
+                            GROUP BY CAST(event_date AS DATE)
+                        ) AS tbl;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily sample collection volume for each lab.",
+        "query": """SELECT lab_name, AVG(sample_volume) FROM
+                        (SELECT lab_name, COUNT(*) as sample_volume
+                            FROM fact_events
+                            WHERE event_code = 'Sample Collection'
+                            GROUP BY lab_name,CAST(event_date AS DATE)
+                        ) AS tbl
+                    Group by lab_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily sample collection volume for Appolo hospital.",
+        "query": """SELECT AVG(sample_volume) FROM
+                        (SELECT hosp_name, COUNT(*) as sample_volume
+                            FROM fact_events
+                            INNER JOIN dim_hosp
+                                ON fact_events.hosp_id = dim_hosp.hosp_id
+                            WHERE event_code = 'Sample Collection'
+                            AND hosp_name = 'Appolo'
+                            GROUP BY hosp_name,CAST(event_date AS DATE)
+                        ) AS tbl;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily sample collection volume for each test department.",
+        "query": """SELECT test_dept_name, AVG(sample_volume) FROM
+                        (SELECT test_dept_name, COUNT(*) as sample_volume
+                            FROM fact_events
+                            INNER JOIN dim_test
+                                ON fact_events.test_id = dim_test.test_id
+                            INNER JOIN dim_test_dept
+                                ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                            WHERE event_code = 'Sample Collection'
+                            GROUP BY test_dept_name,CAST(event_date AS DATE)
+                        ) AS tbl
+                    Group by test_dept_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What is the average daily sample collection volume for each doctor.",
+        "query": """SELECT doctor_name, AVG(sample_volume) FROM
+                        (SELECT doctor_name, COUNT(*) as sample_volume
+                            FROM fact_events
+                            INNER JOIN dim_doctor
+                                ON fact_events.doctor_id = dim_doctor.doctor_id
+                            WHERE event_code = 'Sample Collection'
+                            GROUP BY doctor_name,CAST(event_date AS DATE)
+                        ) AS tbl
+                    Group by doctor_name;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What were the top 10 underutilized instruments today.",
+        "query": """SELECT instrument_name,
+                    (hourly_capacity - test_volume) as underutilization
+                    FROM
+                    (SELECT instrument_name, hourly_capacity*9 AS hourly_capacity, COUNT(*) as test_volume
+                        FROM fact_test_result
+                        INNER JOIN dim_instrument
+                            ON fact_test_result.instrument_id = dim_instrument.instrument_id
+                        WHERE test_date = CURDATE()
+                        GROUP BY instrument_name,hourly_capacity
+                    ) AS tbl
+                    ORDER BY underutilization DESC
+                    LIMIT 10;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What were the top 10 underutilized preanalytic instruments in the last month.",
+        "query": """SELECT instrument_name,
+                    (hourly_capacity - test_volume) as underutilization
+                    FROM
+                    (SELECT instrument_name, hourly_capacity*9*30 AS hourly_capacity, COUNT(*) as test_volume
+                        FROM fact_test_result
+                        INNER JOIN dim_instrument
+                            ON fact_test_result.pre_instrument_id = dim_instrument.instrument_id
+                        WHERE test_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                        GROUP BY instrument_name,hourly_capacity
+                    ) AS tbl
+                    ORDER BY underutilization DESC
+                    LIMIT 10;"""
+    },
+    {
+        "metadata": """""",
+        "input": "What were the top 10 underutilized postanalytic instruments yesterday.",
+        "query": """SELECT instrument_name,
+                    (hourly_capacity - test_volume) as underutilization
+                    FROM
+                    (SELECT instrument_name, hourly_capacity*9 AS hourly_capacity, COUNT(*) as test_volume
+                        FROM fact_test_result
+                        INNER JOIN dim_instrument
+                            ON fact_test_result.post_instrument_id = dim_instrument.instrument_id
+                        WHERE test_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND test_date < CURDATE()
+                        GROUP BY instrument_name,hourly_capacity
+                    ) AS tbl
+                    ORDER BY underutilization DESC
+                    LIMIT 10;"""
+    },
+    {
+        "metadata": """""",
+        "input": "How does the order volume of this quarter compare to the same in the last year.",
+        "query": """SELECT QUARTER(request_date) as quarter, COUNT(*) as order_volume
+                    FROM fact_test_result
+                    WHERE YEAR(request_date) = YEAR(CURDATE()) OR YEAR(request_date) = YEAR(CURDATE())-1
+                    GROUP BY quarter;"""
+    },
+    {
+        "metadata": """""",
+        "input": "Did we get more test volume in this month compared to the same last year.",
+        "query": """SELECT MONTH(request_date)||'-'||YEAR(request_date) as month, COUNT(*) as order_volume
+                    FROM fact_test_result
+                    WHERE YEAR(request_date) = YEAR(CURDATE()) OR YEAR(request_date) = YEAR(CURDATE())-1
+                    GROUP BY month;"""
+    },
+    {
+        "metadata": """""",
+        "input": "Did the volume drop for lab 1 this month compared to the last month.",
+        "query": """SELECT MONTH(request_date)||'-'||YEAR(request_date) as month, COUNT(*) as order_volume
+                    FROM fact_test_result
+                    INNER JOIN dim_lab
+                        ON fact_test_result.lab_id = dim_lab.lab_id
+                    WHERE lab_name = 'Lab 1'
+                    WHERE YEAR(request_date) = YEAR(CURDATE()) OR YEAR(request_date) = YEAR(CURDATE())-1"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the quarterly sample volume for year 2020 and 2021.",
+        "query": """SELECT QUARTER(collect_date) AS quarter, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_test_result
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE YEAR(collect_date) IN (2020,2021)
+                    GROUP BY QUARTER(collect_date)
+                    """
+    },
+    {
+        "metadata": """""",
+        "input": "Give the monthly sample volume for year 2023 and 2024.",
+        "query": """SELECT MONTH(collect_date)||'-'||YEAR(collect_date) AS month_year, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_test_result
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE YEAR(collect_date) IN (2023,2024)
+                    GROUP BY MONTH(collect_date)||'-'||YEAR(collect_date)
+                    """
+    },
+    {
+        "metadata": """""",
+        "input": "Give the weekly sample volume for last two months.",
+        "query": """SELECT DATE_PART('week', collect_date) - DATE_PART('week', DATE_TRUNC('month', collect_date)) + 1 AS week_of_month,
+                    , COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_test_result
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE collect_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months'
+                    GROUP BY DATE_PART('week', collect_date) - DATE_PART('week', DATE_TRUNC('month', collect_date))"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the daily sample volume for last 3 months.",
+        "query": """SELECT CAST(collect_date AS DATE) as collect_date, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_test_result
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE collect_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months'
+                    GROUP BY CAST(collect_date AS DATE)"""
+        
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume by the hour of day for July 2023.",
+        "query": """SELECT DATE_PART('hour', collect_date) as hour_of_day, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE collect_date >= '2023-07-01' AND collect_date < '2023-08-01'
+                    GROUP BY DATE_PART('hour', collect_date)"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume by the hour of day and day of week for the last month.",
+        "query": """SELECT DATE_PART('hour', collect_date) as hour_of_day, DATE_PART('dow', collect_date) as day_of_week, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_sample
+                        ON fact_test_result.sample_id = dim_sample.sample_id
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY DATE_PART('hour', collect_date), DATE_PART('dow', collect_date)"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the preanalytical sample type distribution for the last month.",
+        "query": """SELECT sample_type, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_sample
+                        ON fact_event.sample_id = dim_sample.sample_id
+                    AND event_code = 'Sample seen on preanalytic'
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY sample_type"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the average weekly preanalytical sample type distribution for the last month.",
+        "query": """SELECT sample_type, COUNT(DISTINCT sample_id) as sample_volume
+                    (SELECT DATE_PART('week', collect_date) - DATE_PART('week', DATE_TRUNC('month', collect_date)) + 1 AS week_of_month, sample_type, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_sample
+                        ON fact_event.sample_id = dim_sample.sample_id
+                    AND event_code = 'Sample seen on preanalytic'
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY DATE_PART('week', collect_date) - DATE_PART('week', DATE_TRUNC('month', collect_date)) + 1, sample_type) AS tbl
+                    GROUP BY sample_type"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume distribution by lab for the last month.",
+        "query": """SELECT lab_name, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_lab
+                        ON fact_event.lab_id = dim_lab.lab_id
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY lab_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume distribution by hospital for the last month.",
+        "query": """SELECT hosp_name, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_hosp
+                        ON fact_event.hosp_id = dim_hosp.hosp_id
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY hosp_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume distribution by test department for the last month.",
+        "query": """SELECT test_dept_name, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY test_dept_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the sample volume distribution by test department for the last month.",
+        "query": """SELECT test_dept_name, COUNT(DISTINCT sample_id) as sample_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                    WHERE collect_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY test_dept_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the test order volume distribution for the last month.",
+        "query": """SELECT test_name, COUNT(*) as order_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    WHERE event_code = 'Test Ordered'
+                     AND event_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                    GROUP BY test_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Give the test order volume distribution for the last month with percentage of total volume.",
+        "query": """WITH total_volume_cte AS
+                    (
+                    SELECT test_name,COUNT(*) OVER (PARTITION BY NULL) as total_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    WHERE event_code = 'Test Ordered'
+                     AND event_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+                     )
+                    SELECT test_name, COUNT(*) as order_volume, COUNT(*)/total_volume as percentage
+                    FROM total_volume_cte
+                    GROUP BY test_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "From which hospitals do we get the maximum sample volumes. Order by percentage of total volume.",
+        "query": """WITH total_volume_cte AS
+                    (
+                    SELECT hosp_name,COUNT(*) OVER (PARTITION BY NULL) as total_volume
+                    FROM fact_event
+                    INNER JOIN dim_hosp
+                        ON fact_test_result.hosp_id = dim_hosp.hosp_id
+                    WHERE event_code = 'Test Ordered'
+                     )
+                    SELECT hosp_name, COUNT(*) as order_volume, COUNT(*)/total_volume as percentage
+                    FROM total_volume_cte
+                    GROUP BY hosp_name"""
+    },
+    {
+        "metadata": """""",
+        "input": "Which hours of day are the busiest for Lab 2.",
+        "query": """SELECT DATE_PART('hour', event_date) as hour_of_day, COUNT(*) as event_volume
+                    FROM fact_event
+                    INNER JOIN dim_lab
+                        ON fact_event.lab_id = dim_lab.lab_id
+                    WHERE lab_name = 'Lab 2'
+                    GROUP BY DATE_PART('hour', event_date)"""
+    },
+    {
+        "metadata": """""",
+        "input": "For which hospitals the sample volume percentage decreased significantly in this quarter compared to the last quarter.",
+        "query": """
+                SELECT hosp_name,
+                (current_volume - last_volume) as volume_diff,
+                (current_volume - last_volume)*100/last_volume as percentage_diff
+                FROM
+                (SELECT hosp_name, COUNT(*) as current_volume
+                    FROM fact_event
+                    INNER JOIN dim_hosp
+                        ON fact_event.hosp_id = dim_hosp.hosp_id
+                    WHERE event_date >= DATE_TRUNC('quarter', CURRENT_DATE)
+                    GROUP BY hosp_name) AS current_volume
+                INNER JOIN
+                (SELECT hosp_name, COUNT(*) as last_volume
+                    FROM fact_event
+                    INNER JOIN dim_hosp
+                        ON fact_event.hosp_id = dim_hosp.hosp_id
+                    WHERE event_date >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '1 quarter')
+                    AND event_date < DATE_TRUNC('quarter', CURRENT_DATE)
+                    GROUP BY hosp_name) AS last_volume
+                ON current_volume.hosp_name = last_volume.hosp_name
+                WHERE (current_volume - last_volume) < 0
+                ORDER BY percentage_diff DESC
+                LIMIT 10"""
+    },
+    {
+        "metadata": """""",
+        "input": "For which tests the sample volume percentage increased significantly in this month compared to the same month last year.",
+        "query": """
+                SELECT test_name,
+                (current_volume - last_volume) as volume_diff,
+                (current_volume - last_volume)*100/last_volume as percentage_diff
+                FROM
+                (SELECT test_name, COUNT(*) as current_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    WHERE event_date >= DATE_TRUNC('month', CURRENT_DATE)
+                    GROUP BY test_name) AS current_volume
+                INNER JOIN
+                (SELECT test_name, COUNT(*) as last_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    WHERE event_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 year')
+                    AND event_date < DATE_TRUNC('month', CURRENT_DATE)
+                    GROUP BY test_name) AS last_volume
+                ON current_volume.test_name = last_volume.test_name
+                WHERE (current_volume - last_volume) > 0
+                ORDER BY percentage_diff DESC
+                LIMIT 10"""
+    },
+    {
+        "metadata": """""",
+        "input": "For which labs the sample volume percentage decreased significantly in this year compared to the last year.",
+        "query": """
+                SELECT lab_name,
+                (current_volume - last_volume) as volume_diff,
+                (current_volume - last_volume)*100/last_volume as percentage_diff
+                FROM
+                (SELECT lab_name, COUNT(*) as current_volume
+                    FROM fact_event
+                    INNER JOIN dim_lab
+                        ON fact_event.lab_id = dim_lab.lab_id
+                    WHERE event_date >= DATE_TRUNC('year', CURRENT_DATE)
+                    GROUP BY lab_name) AS current_volume
+                INNER JOIN
+                (SELECT lab_name, COUNT(*) as last_volume
+                    FROM fact_event
+                    INNER JOIN dim_lab
+                        ON fact_event.lab_id = dim_lab.lab_id
+                    WHERE event_date >= DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year')
+                    AND event_date < DATE_TRUNC('year', CURRENT_DATE)
+                    GROUP BY lab_name) AS last_volume
+                ON current_volume.lab_name = last_volume.lab_name
+                WHERE (current_volume - last_volume) < 0
+                ORDER BY percentage_diff DESC
+                LIMIT 10"""
+    },
+    {
+        "metadata": """""",
+        "input": "For which test departments the sample volume percentage increased significantly in this quarter compared to the last quarter.",
+        "query": """
+                SELECT test_dept_name,
+                (current_volume - last_volume) as volume_diff,
+                (current_volume - last_volume)*100/last_volume as percentage_diff
+                FROM
+                (SELECT test_dept_name, COUNT(*) as current_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                    WHERE event_date >= DATE_TRUNC('quarter', CURRENT_DATE)
+                    GROUP BY test_dept_name) AS current_volume
+                INNER JOIN
+                (SELECT test_dept_name, COUNT(*) as last_volume
+                    FROM fact_event
+                    INNER JOIN dim_test
+                        ON fact_event.test_id = dim_test.test_id
+                    INNER JOIN dim_test_dept
+                        ON dim_test.test_dept_id = dim_test_dept.test_dept_id
+                    WHERE event_date >= DATE_TRUNC('quarter', CURRENT_DATE - INTERVAL '1 quarter')
+                    AND event_date < DATE_TRUNC('quarter', CURRENT_DATE)
+                    GROUP BY test_dept_name) AS last_volume
+                ON current_volume.test_dept_name = last_volume.test_dept_name
+                WHERE (current_volume - last_volume) > 0
+                ORDER BY percentage_diff DESC
+                LIMIT 10"""
+    },
+    {
+        "metadata": """""",
+        "input": "For which labs the average collect to result TAT for CBC decreased significantly in this year compared to the last year.",
+        "query": """
+                SELECT lab_name,
+                (current_tat - last_tat) as tat_diff
+                FROM
+                (SELECT lab_name, AVG(DATEDIFF(collect_date, result_date)) as current_tat
+                    FROM fact_test_result
+                    INNER JOIN dim_lab
+                        ON fact_test_result.lab_id = dim_lab.lab_id
+                    INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                    WHERE test_name = 'CBC'
+                    AND YEAR(result_date) = YEAR(CURDATE())
+                    GROUP BY lab_name) AS current_tat
+                    INNER JOIN
+                    (SELECT lab_name, AVG(DATEDIFF(collect_date, result_date)) as last_tat
+                    FROM fact_test_result
+                    INNER JOIN dim_lab
+                        ON fact_test_result.lab_id = dim_lab.lab_id
+                        INNER JOIN dim_test
+                        ON fact_test_result.test_id = dim_test.test_id
+                        WHERE test_name = 'CBC'
+                        AND YEAR(result_date) = YEAR(CURDATE())-1
+                        GROUP BY lab_name) AS last_tat
+                        ON current_tat.lab_name = last_tat.lab_name
+                        WHERE (current_tat - last_tat) < 0
+                        ORDER BY tat_diff DESC
+                        LIMIT 10"""
+                        
+    },
+
+]
